@@ -4,25 +4,25 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta property="og:title" content="ᴊᴏᴇʟ xᴍᴅ ᴠ¹⁰">
-    <meta property="og:description" content="ραιя-¢σ∂є ℓιηкєя ƒσя ʝσєℓ-χ∂ ωнαтѕαρρ вσт.">
+    <meta property="og:title" content="Demon Slayer">
+    <meta property="og:description" content="Session Code Generator for Demon Slayer Bot.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://github.com/joeljamestech2/JOEL-XMD">
     <meta property="og:image" content="https://avatars.githubusercontent.com/u/162905644?v=4">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="ʝσєℓ-χм∂ ραιя ¢σ∂є">
-    <meta name="twitter:description" content="ραιя-¢σ∂є ℓιηкєя ƒσя ʝσєℓ-χ∂ ωнαтѕαρρ вσт.">
+    <meta name="twitter:title" content="Demon Slayer Session">
+    <meta name="twitter:description" content="Generate your session code for Demon Slayer Bot.">
     <meta name="twitter:image" content="https://avatars.githubusercontent.com/u/162905644?v=4">
-    <link rel="shortcut icon" href="" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Graduate&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <title>Demon Slayer</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Graduate', sans-serif;
             color: white;
@@ -47,17 +47,7 @@
             object-fit: cover;
         }
 
-        /* Blurred Overlay */
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(5px);
-        }
-
+        /* Main Content */
         .container {
             position: relative;
             z-index: 10;
@@ -65,52 +55,84 @@
             max-width: 400px;
             width: 100%;
             margin: auto;
-            background: rgba(0, 0, 0, 0.8);
+            background: transparent;
             border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            box-shadow: none;
         }
 
+        /* Green Header */
         h3 {
-            animation: fadeIn 2s ease-in-out;
+            color: limegreen;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        /* White text under header */
+        p {
+            color: white;
+            margin-bottom: 10px;
         }
 
+        /* Input Box */
         .input-container {
             display: flex;
-            background: #ffffff;
-            border-radius: 1rem;
-            padding: 0.3rem;
-            gap: 0.3rem;
+            border: 1px solid white;
+            border-radius: 10px;
+            padding: 5px;
             max-width: 300px;
             width: 100%;
             margin: 0 auto;
+            background: transparent;
         }
 
         .input-container input {
-            border-radius: 0.8rem 0 0 0.8rem;
-            background: #000000;
-            width: 89%;
-            padding: 1rem;
+            flex: 1;
+            background: transparent;
             border: none;
-            border-left: 2px solid #075e54;
-            color: #ecf0f1;
-        }
-
-        .input-container button {
-            flex-basis: 25%;
-            padding: 1rem;
-            background: #25d366;
-            font-weight: 900;
             color: white;
-            border: none;
-            border-radius: 0 1rem 1rem 0;
-            cursor: pointer;
+            padding: 10px;
+            font-size: 16px;
+            outline: none;
         }
 
+        /* Orange Button */
+        .input-container button {
+            background: orange;
+            border: none;
+            color: white;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .input-container button:hover {
+            background: darkorange;
+        }
+
+        /* Neon Animated Footer */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 10px cyan, 0 0 20px blue;
+            animation: glow 2s infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 10px cyan, 0 0 20px blue;
+            }
+            to {
+                text-shadow: 0 0 20px cyan, 0 0 30px blue;
+            }
+        }
+
+        /* Loading Spinner */
         #loading-spinner {
             display: none;
             color: white;
@@ -125,17 +147,6 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        footer {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            color: #fff;
-            padding: 10px 0;
-            text-align: center;
-            font-size: 14px;
-        }
     </style>
 </head>
 <body>
@@ -143,17 +154,14 @@
     <!-- Video Background -->
     <div class="video-container">
         <video autoplay loop muted>
-            <source src="https://www.w3schools.com/howto/rain.mp4" type="video/mp4">
+            <source src="https://files.catbox.moe/iyph5k.mp4" type="video/mp4">
             Your browser does not support HTML5 video.
         </video>
     </div>
 
-    <!-- Overlay -->
-    <div class="overlay"></div>
-
     <!-- Main Content -->
     <div class="container">
-        <h3>JOEL XMD BOT PAIR SITE</h3>
+        <h3>Demon Slayer Session</h3>
         <p>Enter your phone number with country code.</p>
         <div class="input-container">
             <input type="number" id="number" placeholder="e.g., +254712345678">
@@ -162,11 +170,13 @@
         <div id="loading-spinner">
             <i class="fas fa-spinner fa-spin"></i>
         </div>
-        <footer>
-            JOEL XMD MADE BY LORD JOEL
-        </footer>
         <br>
         <main id="pair"></main>
+    </div>
+
+    <!-- Neon Animated Footer -->
+    <div class="footer">
+        ᴍᴀᴅᴇ ʙʏ ᴍᴀʀɪsᴇʟ
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"></script>
