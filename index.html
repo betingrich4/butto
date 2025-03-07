@@ -48,6 +48,12 @@
       font-size: 22px;
     }
 
+    /* White Text Under Header */
+    p {
+      color: white;
+      font-size: 16px;
+    }
+
     /* Transparent Input Box with Thin White Border */
     .input-container {
       display: flex;
@@ -63,8 +69,7 @@
     .input-container input {
       border: 1px solid white;
       background: transparent;
-      width: 89%;
-      flex-basis: 75%;
+      width: 100%;
       padding: 10px;
       color: white;
       border-radius: 5px;
@@ -76,11 +81,12 @@
       color: rgba(255, 255, 255, 0.5);
     }
 
-    /* Button */
-    .input-container button {
-      flex-basis: 25%;
+    /* Orange Code Button */
+    .code-btn {
+      width: 100%;
       padding: 10px;
-      background: #25d366;
+      margin-top: 10px;
+      background: orange;
       color: white;
       border: none;
       font-weight: bold;
@@ -89,8 +95,8 @@
       transition: 0.3s;
     }
 
-    .input-container button:hover {
-      background: #2980b9;
+    .code-btn:hover {
+      background: #e67e22;
     }
 
     /* Neon Animated Footer */
@@ -125,13 +131,14 @@
 
   <!-- Transparent Input Box -->
   <div class="container">
-    <h3>Demon Slayer Session site</h3>
+    <h3>Demon Slayer Session</h3>
     <p>Enter your phone number with country code.</p>
     
     <div class="input-container">
-      <input type="number" id="number" placeholder="+1234567890">
-      <button id="submit">Code</button>
+      <input type="number" id="number" placeholder="254740007567">
     </div>
+
+    <button id="submit" class="code-btn">Code</button>
 
     <div id="loading-spinner" style="display: none; color: white; margin-top: 10px;">
       <i class="fas fa-spinner fa-spin"></i>
@@ -155,7 +162,7 @@
       let text = document.getElementById("copy").innerText;
       let obj = document.getElementById("copy");
       await navigator.clipboard.writeText(obj.innerText.replace(' ', ''));
-      obj.innerText = "ᴄᴏᴘɪᴇᴅ";
+      obj.innerText = "CODE COPIED";
       obj.style = "color:blue;font-weight:bold";
       setTimeout(() => {
         obj.innerText = text;
@@ -191,7 +198,7 @@
         try {
           let { data } = await axios(`/pair?phone=${bc}`);
           let code = data.code || "Service Unavailable";
-          a.innerHTML = '<font id="copy" onclick="Copy()" style="color:blue;font-weight:bold">ᴄᴏᴅᴇ: <span style="color:white;font-weight:bold">' + code + '</span></font><br><br><br>';
+          a.innerHTML = '<font id="copy" onclick="Copy()" style="color:blue;font-weight:bold">YOUR CODE: <span style="color:white;font-weight:bold">' + code + '</span></font><br><br><br>';
           isCodeDisplayed = true;
 
           setTimeout(() => {
