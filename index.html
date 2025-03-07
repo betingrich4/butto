@@ -1,217 +1,221 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Demon Slayer</title>
-  <link href="https://fonts.googleapis.com/css2?family=Graduate&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-  
-  <style>
-    /* Fullscreen Video Background */
-    body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      font-family: 'Graduate', sans-serif;
-    }
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:title" content="ᴊᴏᴇʟ xᴍᴅ ᴠ¹⁰">
+    <meta property="og:description" content="ραιя-¢σ∂є ℓιηкєя ƒσя ʝσєℓ-χ∂ ωнαтѕαρρ вσт.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://github.com/joeljamestech2/JOEL-XMD">
+    <meta property="og:image" content="https://avatars.githubusercontent.com/u/162905644?v=4">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ʝσєℓ-χм∂ ραιя ¢σ∂є">
+    <meta name="twitter:description" content="ραιя-¢σ∂є ℓιηкєя ƒσя ʝσєℓ-χ∂ ωнαтѕαρρ вσт.">
+    <meta name="twitter:image" content="https://avatars.githubusercontent.com/u/162905644?v=4">
+    <link rel="shortcut icon" href="" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Graduate&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Graduate', sans-serif;
+            color: white;
+            text-align: center;
+            overflow: hidden;
+        }
 
-    /* Video Styling */
-    #background-video {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      z-index: -1;
-    }
+        /* Video Background */
+        .video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
 
-    /* Centered Transparent Box */
-    .container {
-      text-align: center;
-      padding: 20px;
-      border-radius: 10px;
-      max-width: 400px;
-      width: 100%;
-      background: rgba(0, 0, 0, 0.2); /* Almost transparent */
-      border: none;
-    }
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
 
-    /* Green Heading */
-    h3 {
-      color: limegreen;
-      font-size: 22px;
-    }
+        /* Blurred Overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+        }
 
-    /* White Text Under Header */
-    p {
-      color: white;
-      font-size: 16px;
-    }
+        .container {
+            position: relative;
+            z-index: 10;
+            padding: 20px;
+            max-width: 400px;
+            width: 100%;
+            margin: auto;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
 
-    /* Transparent Input Box with Thin White Border */
-    .input-container {
-      display: flex;
-      background: transparent;
-      border-radius: 10px;
-      padding: 0.3rem;
-      max-width: 300px;
-      width: 100%;
-      margin: 0 auto;
-      border: none;
-    }
+        h3 {
+            animation: fadeIn 2s ease-in-out;
+        }
 
-    .input-container input {
-      border: 1px solid white;
-      background: transparent;
-      width: 100%;
-      padding: 10px;
-      color: white;
-      border-radius: 5px;
-      font-size: 16px;
-      outline: none;
-    }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
 
-    .input-container input::placeholder {
-      color: rgba(255, 255, 255, 0.5);
-    }
+        .input-container {
+            display: flex;
+            background: #ffffff;
+            border-radius: 1rem;
+            padding: 0.3rem;
+            gap: 0.3rem;
+            max-width: 300px;
+            width: 100%;
+            margin: 0 auto;
+        }
 
-    /* Orange Code Button */
-    .code-btn {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      background: orange;
-      color: white;
-      border: none;
-      font-weight: bold;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: 0.3s;
-    }
+        .input-container input {
+            border-radius: 0.8rem 0 0 0.8rem;
+            background: #000000;
+            width: 89%;
+            padding: 1rem;
+            border: none;
+            border-left: 2px solid #075e54;
+            color: #ecf0f1;
+        }
 
-    .code-btn:hover {
-      background: #e67e22;
-    }
+        .input-container button {
+            flex-basis: 25%;
+            padding: 1rem;
+            background: #25d366;
+            font-weight: 900;
+            color: white;
+            border: none;
+            border-radius: 0 1rem 1rem 0;
+            cursor: pointer;
+        }
 
-    /* Neon Animated Footer */
-    footer {
-      position: fixed;
-      bottom: 10px;
-      width: 100%;
-      text-align: center;
-      font-size: 18px;
-      font-weight: bold;
-      color: #ff00ff;
-      text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 15px #ff00ff;
-      animation: neonGlow 1.5s infinite alternate;
-    }
+        #loading-spinner {
+            display: none;
+            color: white;
+            margin-top: 10px;
+        }
 
-    @keyframes neonGlow {
-      0% {
-        text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 15px #ff00ff;
-      }
-      100% {
-        text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 30px #ff00ff;
-      }
-    }
-  </style>
+        .fa-spinner {
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
 
-  <!-- Video Background -->
-  <video id="background-video" autoplay loop muted>
-    <source src="https://files.catbox.moe/iyph5k.mp4" type="video/mp4">
-  </video>
-
-  <!-- Transparent Input Box -->
-  <div class="container">
-    <h3>Demon Slayer Session</h3>
-    <p>Enter your phone number with country code.</p>
-    
-    <div class="input-container">
-      <input type="number" id="number" placeholder="254740007567">
+    <!-- Video Background -->
+    <div class="video-container">
+        <video autoplay loop muted>
+            <source src="https://www.w3schools.com/howto/rain.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+        </video>
     </div>
 
-    <button id="submit" class="code-btn">Code</button>
+    <!-- Overlay -->
+    <div class="overlay"></div>
 
-    <div id="loading-spinner" style="display: none; color: white; margin-top: 10px;">
-      <i class="fas fa-spinner fa-spin"></i>
+    <!-- Main Content -->
+    <div class="container">
+        <h3>JOEL XMD BOT PAIR SITE</h3>
+        <p>Enter your phone number with country code.</p>
+        <div class="input-container">
+            <input type="number" id="number" placeholder="e.g., +254712345678">
+            <button id="submit">Code</button>
+        </div>
+        <div id="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+        </div>
+        <footer>
+            JOEL XMD MADE BY LORD JOEL
+        </footer>
+        <br>
+        <main id="pair"></main>
     </div>
-    
-    <main id="pair"></main>
-  </div>
 
-  <!-- Neon Animated Footer -->
-  <footer>ᴍᴀᴅᴇ ʙʏ ᴍᴀʀɪsᴇʟ</footer>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"></script>
+    <script>
+        let pairContainer = document.getElementById("pair");
+        let submitButton = document.getElementById("submit");
+        let phoneNumberInput = document.getElementById("number");
+        let isSubmitting = false;
+        let isCodeDisplayed = false;
 
-  <script>
-    let a = document.getElementById("pair");
-    let b = document.getElementById("submit");
-    let c = document.getElementById("number");
-
-    let isSubmitting = false;
-    let isCodeDisplayed = false;
-
-    async function Copy() {
-      let text = document.getElementById("copy").innerText;
-      let obj = document.getElementById("copy");
-      await navigator.clipboard.writeText(obj.innerText.replace(' ', ''));
-      obj.innerText = "CODE COPIED";
-      obj.style = "color:blue;font-weight:bold";
-      setTimeout(() => {
-        obj.innerText = text;
-        obj.style = "color:white;font-weight-bold";
-      }, 500);
-    }
-
-    b.addEventListener("click", async (e) => {
-      e.preventDefault();
-
-      if (isCodeDisplayed) {
-        alert("Please wait for 2 minutes before requesting a new code.");
-        return;
-      }
-
-      if (isSubmitting) {
-        alert("Please wait for the code before trying to request again.");
-        return;
-      }
-
-      if (!c.value) {
-        a.innerHTML = '<a style="color:red;font-weight:bold">Enter your WhatsApp number with a country code</a><br><br>';
-      } else if (c.value.replace(/[^0-9]/g, "").length < 11) {
-        a.innerHTML = '<a style="color:red;font-weight:bold">Invalid number format</a><br><br>';
-      } else {
-        isSubmitting = true;
-        const bc = c.value.replace(/[^0-9]/g, "");
-        c.type = "text";
-        c.value = "+" + bc;
-        c.style = "color:white;font-size:22px";
-        a.innerHTML = '<a style="color:purple;font-size:22px;font-weight:bold">Generating Code...</a><br><br>';
-
-        try {
-          let { data } = await axios(`/pair?phone=${bc}`);
-          let code = data.code || "Service Unavailable";
-          a.innerHTML = '<font id="copy" onclick="Copy()" style="color:blue;font-weight:bold">YOUR CODE: <span style="color:white;font-weight:bold">' + code + '</span></font><br><br><br>';
-          isCodeDisplayed = true;
-
-          setTimeout(() => {
-            isCodeDisplayed = false;
-          }, 120000);
-        } catch (error) {
-          a.innerHTML = '<a style="color:red;font-weight:bold">Error fetching code. Try again.</a>';
-        } finally {
-          isSubmitting = false;
+        async function Copy() {
+            let text = document.getElementById("copy").innerText;
+            let obj = document.getElementById("copy");
+            await navigator.clipboard.writeText(obj.innerText.replace(' ', ''));
+            obj.innerText = "CODE COPIED";
+            obj.style = "color:blue;font-weight:bold";
+            setTimeout(() => {
+                obj.innerText = text;
+                obj.style = "color:black;font-weight:bold";
+            }, 500);
         }
-      }
-    });
-  </script>
+
+        submitButton.addEventListener("click", async (e) => {
+            e.preventDefault();
+
+            if (isCodeDisplayed) {
+                alert("Please wait for 2 minutes before requesting a new code.");
+                return;
+            }
+
+            let phoneNumber = phoneNumberInput.value.trim();
+            if (!phoneNumber || phoneNumber.replace(/[^0-9]/g, "").length < 11) {
+                pairContainer.innerHTML = '<a style="color:red;font-weight:bold">Invalid number format</a><br><br>';
+                return;
+            }
+
+            isSubmitting = true;
+            pairContainer.innerHTML = '<a style="color:purple;font-size:22px;font-weight:bold">Generating Code...</a><br><br>';
+
+            try {
+                let { data } = await axios.get(`https://your-api-endpoint.com/pair?phone=${phoneNumber}`);
+                let code = data.code || "Service Unavailable";
+                pairContainer.innerHTML = `<font id="copy" onclick="Copy()" style="color:blue;font-weight:bold" size="5">YOUR CODE: <span style="color:white;font-weight:bold">${code}</span></font><br><br>`;
+                isCodeDisplayed = true;
+            } catch (error) {
+                pairContainer.innerHTML = '<a style="color:red;font-weight:bold">Error generating code</a><br><br>';
+            }
+        });
+    </script>
 
 </body>
 </html>
