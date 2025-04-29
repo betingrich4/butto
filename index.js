@@ -1,213 +1,158 @@
 import { Boom } from '@hapi/boom'
-import Baileys, {
-  DisconnectReason,
-  delay,
-  useMultiFileAuthState
-} from '@whiskeysockets/baileys'
-import cors from 'cors'
+import Baileys, { DisconnectReason, delay, useMultiFileAuthState } from '@whiskeysockets/baileys'
 import express from 'express'
 import fs from 'fs'
-import PastebinAPI from 'pastebin-js'
 import path, { dirname } from 'path'
-import pino from 'pino'
 import { fileURLToPath } from 'url'
-let pastebin = new PastebinAPI('EMWTMkQAVfJa9kM-MRUrxd5Oku1U7pgL')
+import pino from 'pino'
+import moment from 'moment-timezone'
+import chalk from 'chalk'
 
-const app = express()
-
-app.use((req, res, next) => {
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
-
-  res.setHeader('Pragma', 'no-cache')
-
-  res.setHeader('Expires', '0')
-  next()
-})
-
-app.use(cors())
-let PORT = process.env.PORT || 8000
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-function createRandomId() {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  let id = ''
-  for (let i = 0; i < 10; i++) {
-    id += characters.charAt(Math.floor(Math.random() * characters.length))
-  }
-  return id
+// Configuration
+const config = {
+  TIME_ZONE: 'Africa/Nairobi',
+  AUTO_STATUS_REACT: true,
+  AUTO_REACT: true,
+  STATUS_REACT_EMOJIS: ['❤️', '💸', '😇', '🍂', '💥'],
+  BIO_UPDATE_INTERVAL: 60000, // 1 minute
+  PREFIX: '!'
 }
 
-let sessionFolder = `./auth/${createRandomId()}`
-if (fs.existsSync(sessionFolder)) {
+const app = express()
+let PORT = process.env.PORT || 8000
+
+// Session Management
+let sessionFolder = `./auth/${Math.random().toString(36).substring(7)}`
+const clearState = () => fs.existsSync(sessionFolder) && fs.rmSync(sessionFolder, { recursive: true })
+
+// Bio Updater
+const updateBio = async (sock) => {
   try {
-    fs.rmdirSync(sessionFolder, { recursive: true })
-    console.log('Deleted the "SESSION" folder.')
-  } catch (err) {
-    console.error('Error deleting the "SESSION" folder:', err)
-  }
-}
-
-let clearState = () => {
-  fs.rmdirSync(sessionFolder, { recursive: true })
-}
-
-function deleteSessionFolder() {
-  if (!fs.existsSync(sessionFolder)) {
-    console.log('The "SESSION" folder does not exist.')
-    return
-  }
-
-  try {
-    fs.rmdirSync(sessionFolder, { recursive: true })
-    console.log('Deleted the "SESSION" folder.')
-  } catch (err) {
-    console.error('Error deleting the "SESSION" folder:', err)
-  }
-}
-
-app.get('/', async (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'))
-})
-
-app.get('/qr', async (req, res) => {
-  res.sendFile(path.join(__dirname, 'qr.html'))
-})
-
-app.get('/code', async (req, res) => {
-  res.sendFile(path.join(__dirname, 'pair.html'))
-})
-
-app.get('/pair', async (req, res) => {
-  let phone = req.query.phone
-
-  if (!phone) return res.json({ error: 'Please Provide Phone Number' })
-
-  try {
-    const code = await startnigg(phone)
-    res.json({ code: code })
+    const now = moment().tz(config.TIME_ZONE)
+    const newBio = `⏰ ${now.format('HH:mm')} | ${now.format('dddd')} | 📅 ${now.format('D MMMM YYYY')} | Marisel`
+    await sock.updateProfileStatus(newBio)
+    console.log(chalk.blue(`Bio updated: ${newBio}`))
   } catch (error) {
-    console.error('Error in WhatsApp authentication:', error)
-    res.status(500).json({ error: 'Internal Server Error' })
+    console.error(chalk.red('Bio update error:'), error)
   }
-})
+}
 
-async function startnigg(phone) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      if (!fs.existsSync(sessionFolder)) {
-        await fs.mkdirSync(sessionFolder)
+// Start Bot Functionality
+const startBotFeatures = async (sock) => {
+  // Start bio updater
+  const bioInterval = setInterval(() => updateBio(sock), config.BIO_UPDATE_INTERVAL)
+  
+  // Status auto-view and react
+  sock.ev.on('messages.upsert', async ({ messages }) => {
+    const statusMsg = messages.find(m => m.key.remoteJid === 'status@broadcast')
+    if (statusMsg && config.AUTO_STATUS_REACT) {
+      try {
+        await sock.readMessages([statusMsg.key])
+        const randomEmoji = config.STATUS_REACT_EMOJIS[
+          Math.floor(Math.random() * config.STATUS_REACT_EMOJIS.length)
+        ]
+        await sock.sendMessage(statusMsg.key.remoteJid, {
+          react: { 
+            text: randomEmoji, 
+            key: statusMsg.key 
+          }
+        })
+        console.log(chalk.green(`Reacted to status with ${randomEmoji}`))
+      } catch (error) {
+        console.error(chalk.red('Status react error:'), error)
       }
+    }
+  })
 
-      const { state, saveCreds } = await useMultiFileAuthState(sessionFolder)
-
-      const negga = Baileys.makeWASocket({
-        printQRInTerminal: false,
-        logger: pino({
-          level: 'silent',
-        }),
-        browser: ['Ubuntu', 'Chrome', '20.0.04'],
-        auth: state,
-      })
-
-      if (!negga.authState.creds.registered) {
-        let phoneNumber = phone ? phone.replace(/[^0-9]/g, '') : ''
-        if (phoneNumber.length < 11) {
-          return reject(new Error('Please Enter Your Number With Country Code !!'))
-        }
-        setTimeout(async () => {
-          try {
-            let code = await negga.requestPairingCode(phoneNumber)
-            console.log(`Gifted-Md Pairing Code : ${code}`)
-            resolve(code)
-          } catch (requestPairingCodeError) {
-            const errorMessage = 'Error requesting pairing code from WhatsApp'
-            console.error(errorMessage, requestPairingCodeError)
-            return reject(new Error(errorMessage))
-          }
-        }, 2000)
-      }
-
-      negga.ev.on('creds.update', saveCreds)
-
-      negga.ev.on('connection.update', async update => {
-        const { connection, lastDisconnect } = update
-
-        if (connection === 'open') {
-          await delay(10000)
-
-          const output = await pastebin.createPasteFromFile(
-            `${sessionFolder}/creds.json`,
-            'Guru Bhai',
-            null,
-            1,
-            'N'
-          )
-          const sessi = 'Demon-slayer~' + output.split('https://pastebin.com/')[1]
-          console.log(sessi)
-          await delay(2000)
-          let guru = await negga.sendMessage(negga.user.id, { text: sessi })
-          await delay(2000)
-          await negga.sendMessage(
-            negga.user.id,
-            {
-              text: '*╭──────────────━┈⊷*\n*║ᴅᴇᴍᴏɴ sʟᴀʏᴇʀ ᴄᴏɴɴᴇᴄᴛᴇᴅ*\n*╰───────────────━⊷*\n\n*╭─────────────━┈⊷*\nᴏɴʟʏ sᴇɴᴅ ᴛʜɪs ᴛᴏ ʏᴏᴜʀ ᴅᴇᴘʟᴏʏᴇʀ\n*╰─────────────━┈⊷*\n\n> *ᴍᴀᴅᴇ ʙʏ ᴄʀᴇᴡ sʟᴀʏᴇʀ*',
-            },
-            { quoted: guru }
-          )
-
-          console.log('Connected to WhatsApp Servers')
-
-          try {
-            deleteSessionFolder()
-          } catch (error) {
-            console.error('Error deleting session folder:', error)
-          }
-
-          process.send('reset')
-        }
-
-        if (connection === 'close') {
-          let reason = new Boom(lastDisconnect?.error)?.output.statusCode
-          if (reason === DisconnectReason.connectionClosed) {
-            console.log('[Connection closed, reconnecting....!]')
-            process.send('reset')
-          } else if (reason === DisconnectReason.connectionLost) {
-            console.log('[Connection Lost from Server, reconnecting....!]')
-            process.send('reset')
-          } else if (reason === DisconnectReason.loggedOut) {
-            clearState()
-            console.log('[Device Logged Out, Please Try to Login Again....!]')
-            clearState()
-            process.send('reset')
-          } else if (reason === DisconnectReason.restartRequired) {
-            console.log('[Server Restarting....!]')
-            startnigg()
-          } else if (reason === DisconnectReason.timedOut) {
-            console.log('[Connection Timed Out, Trying to Reconnect....!]')
-            process.send('reset')
-          } else if (reason === DisconnectReason.badSession) {
-            console.log('[BadSession exists, Trying to Reconnect....!]')
-            clearState()
-            process.send('reset')
-          } else if (reason === DisconnectReason.connectionReplaced) {
-            console.log(`[Connection Replaced, Trying to Reconnect....!]`)
-            process.send('reset')
-          } else {
-            console.log('[Server Disconnected: Maybe Your WhatsApp Account got Fucked....!]')
-            process.send('reset')
-          }
+  // Auto-reaction to messages
+  sock.ev.on('messages.upsert', async ({ messages }) => {
+    if (!config.AUTO_REACT) return
+    const message = messages[0]
+    if (!message.key.fromMe) {
+      const randomEmoji = config.STATUS_REACT_EMOJIS[
+        Math.floor(Math.random() * config.STATUS_REACT_EMOJIS.length)
+      ]
+      await sock.sendMessage(message.key.remoteJid, {
+        react: { 
+          text: randomEmoji, 
+          key: message.key 
         }
       })
+    }
+  })
 
-      negga.ev.on('messages.upsert', () => {})
-    } catch (error) {
-      console.error('An Error Occurred:', error)
-      throw new Error('An Error Occurred')
+  // Connection cleanup
+  sock.ev.on('connection.update', (update) => {
+    if (update.connection === 'close') {
+      clearInterval(bioInterval)
     }
   })
 }
 
+// Pairing Code Endpoint
+app.get('/pair', async (req, res) => {
+  const phone = req.query.phone?.replace(/[^0-9]/g, '')
+  if (!phone || phone.length < 11) {
+    return res.json({ error: 'Invalid phone number' })
+  }
+
+  try {
+    clearState()
+    fs.mkdirSync(sessionFolder, { recursive: true })
+    
+    const { state, saveCreds } = await useMultiFileAuthState(sessionFolder)
+    const sock = Baileys.makeWASocket({
+      auth: state,
+      printQRInTerminal: false,
+      logger: pino({ level: 'silent' })
+    })
+
+    sock.ev.on('creds.update', saveCreds)
+    
+    const code = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Timeout')), 30000)
+      
+      sock.ev.on('connection.update', async (update) => {
+        if (update.connection === 'open') {
+          clearTimeout(timeout)
+          
+          // Send welcome message
+          await sock.sendMessage(sock.user.id, {
+            text: `*Demon Slayer MiniBot Activated!*\n\n` +
+                  `• Auto-status viewing: ✅\n` +
+                  `• Auto-reactions: ✅\n` +
+                  `• Bio updates: Every minute\n\n` +
+                  `_Bot will now run automatically_`
+          })
+          
+          // Start bot features
+          await startBotFeatures(sock)
+          await updateBio(sock) // Initial bio update
+          
+          resolve('SUCCESS')
+        }
+      })
+
+      sock.requestPairingCode(phone)
+        .then(code => resolve(code))
+        .catch(err => {
+          clearTimeout(timeout)
+          reject(err)
+        })
+    })
+
+    res.json({ code: typeof code === 'string' ? code : 'SUCCESS' })
+  } catch (error) {
+    console.error(chalk.red('Pairing error:'), error)
+    res.status(500).json({ error: error.message })
+  } finally {
+    setTimeout(clearState, 5000) // Cleanup after 5 sec
+  }
+})
+
 app.listen(PORT, () => {
-  console.log(`API Running on PORT:${PORT}`)
+  console.log(chalk.yellow(`Server running on port ${PORT}`))
 })
