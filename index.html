@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demon Slayer Session</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+      background: #121212;
+      color: white;
+    }
+    video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1;
+      opacity: 0.7;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 1;
+    }
+    .box {
+      width: 300px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+      text-align: center;
+      border: 2px solid #ff0000;
+      animation: neon-border 2s linear infinite;
+    }
+    @keyframes neon-border {
+      0% { border-color: #ff0000; box-shadow: 0 0 10px #ff0000; }
+      14% { border-color: #ff7300; box-shadow: 0 0 10px #ff7300; }
+      28% { border-color: #fffb00; box-shadow: 0 0 10px #fffb00; }
+      42% { border-color: #48ff00; box-shadow: 0 0 10px #48ff00; }
+      57% { border-color: #00ffd5; box-shadow: 0 0 10px #00ffd5; }
+      71% { border-color: #002bff; box-shadow: 0 0 10px #002bff; }
+      85% { border-color: #7a00ff; box-shadow: 0 0 10px #7a00ff; }
+      100% { border-color: #ff00c8; box-shadow: 0 0 10px #ff00c8; }
+    }
+    .input-container {
+      display: flex;
+      background: linear-gradient(135deg, #32CD32 0%, #007bff 100%);
+      border-radius: 1rem;
+      padding: 0.3rem;
+      gap: 0.3rem;
+      max-width: 300px;
+      width: 100%;
+      margin: 20px 0;
+    }
+    .input-container input {
+      border-radius: 0.8rem 0 0 0.8rem;
+      background: #fff;
+      color: #000;
+      border: none;
+      border-left: 2px solid #007bff;
+      width: 89%;
+      padding: 1rem;
+      transition: all 0.2s ease-in-out;
+    }
+    .input-container button {
+      flex-basis: 25%;
+      padding: 1rem;
+      background: linear-gradient(45deg, #007bff 0%, #32CD32 100%);
+      font-weight: 900;
+      letter-spacing: 0.3rem;
+      text-transform: uppercase;
+      color: #fff;
+      border: none;
+      width: 100%;
+      border-radius: 0 1rem 1rem 0;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+    }
+    .centered-text {
+      text-align: center;
+      margin: 10px 0;
+    }
+    #pair {
+      margin: 20px 0;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <video autoplay loop muted>
+    <source src="https://files.catbox.moe/uzvqg3.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+
+  <div class="container">
+    <div class="box">
+      <i class="fa fa-user"></i>
+      <h3 class="centered-text">Demon Slayer Session</h3>
+      <p class="centered-text">Enter your phone number below to generate a pairing code.</p>
+      <p class="centered-text">Made by Marisel</p>
+      
+      <div class="input-container">
+        <input type="number" id="number" placeholder="Eg 254740007567">
+        <button id="submit">Enter</button>
+      </div>
+      
+      <div id="pair"></div>
+    </div>
+  </div>
+
+  <script>
+    const pairElement = document.getElementById("pair");
+    const submitButton = document.getElementById("submit");
+    const numberInput = document.getElementById("number");
+
+    async function copyToClipboard() {
+      const text = document.getElementById("copy").innerText;
+      const code = text.replace('YOUR CODE: ', '');
+      try {
+        await navigator.clipboard.writeText(code);
+        const copyBtn = document.getElementById("copy");
+        copyBtn.innerText = "COPIED!";
+        copyBtn.style.color = "yellow";
+        setTimeout(() => {
+          copyBtn.innerText = text;
+          copyBtn.style.color = "white";
+        }, 2000);
+      } catch (err) {
+        alert("Failed to copy: " + err);
+      }
+    }
+
+    submitButton.addEventListener("click", async (e) => {
+      e.preventDefault();
+      if (!numberInput.value) {
+        pairElement.innerHTML = '<span style="color: white;">Please enter a valid phone number.</span>';
+        return;
+      }
+
+      const cleanNumber = numberInput.value.replace(/[^0-9]/g, "");
+      if (cleanNumber.length < 11) {
+        pairElement.innerHTML = '<span style="color: white;">Invalid Number Format</span>';
+        return;
+      }
+
+      pairElement.innerHTML = '<span style="color: white;">Generating Code...</span>';
+      
+      try {
+        const response = await fetch(`/pair?phone=${cleanNumber}`);
+        const data = await response.json();
+        
+        if (data.error) {
+          pairElement.innerHTML = `<span style="color: red;">${data.error}</span>`;
+          return;
+        }
+
+        pairElement.innerHTML = `
+          <span id="copy" onclick="copyToClipboard()" style="color: white; cursor: pointer;">
+            YOUR CODE: <span style="color: yellow;">${data.code}</span>
+          </span>
+        `;
+        
+        // Format the number display
+        numberInput.type = "text";
+        numberInput.value = `+${cleanNumber}`;
+      } catch (error) {
+        pairElement.innerHTML = `<span style="color: red;">Error: ${error.message}</span>`;
+      }
+    });
+  </script>
+</body>
+  </html>
