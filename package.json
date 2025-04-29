@@ -4,16 +4,16 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "heroku-postbuild": "npm install"
+    "heroku-postbuild": "npm install && mkdir -p public && cp *.html public/ 2>/dev/null || true"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "latest",
     "express": "^4.18.2",
     "moment-timezone": "^0.5.43",
-    "pino": "^8.15.1",
-    "zlib": "^1.0.5"
+    "pino": "^8.15.1"
   },
   "engines": {
-    "node": "18.x"
+    "node": "18.x",
+    "npm": "9.x"
   }
 }
