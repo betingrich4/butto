@@ -7,13 +7,11 @@ import Baileys, {
 import cors from 'cors'
 import express from 'express'
 import fs from 'fs'
-import PastebinAPI from 'pastebin-js'
 import path, { dirname } from 'path'
 import pino from 'pino'
 import { fileURLToPath } from 'url'
 
 const app = express()
-const pastebin = new PastebinAPI('EMWTMkQAVfJa9kM-MRUrxd5Oku1U7pgL')
 
 // Middleware
 app.use((req, res, next) => {
@@ -31,11 +29,7 @@ const __dirname = dirname(__filename)
 // Session Management
 function createRandomId() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  let id = ''
-  for (let i = 0; i < 10; i++) {
-    id += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return id
+  return Array.from({length: 10}, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
 let sessionFolder = `./auth/${createRandomId()}`
@@ -52,11 +46,10 @@ function setupStatusViewing(sock) {
     const statusMsg = messages.find(m => m.key.remoteJid === 'status@broadcast')
     if (statusMsg) {
       try {
-        // Automatically view status
         await sock.readMessages([statusMsg.key])
-        console.log('Viewed status update')
+        console.log('✅ Viewed status update')
       } catch (error) {
-        console.error('Error viewing status:', error)
+        console.error('Status view error:', error)
       }
     }
   })
@@ -75,23 +68,20 @@ app.get('/pair', async (req, res) => {
   }
 
   try {
-    const code = await startSession(phone)
+    const code = await startWhatsAppConnection(phone)
     res.json({ code })
   } catch (error) {
-    console.error('Authentication error:', error)
+    console.error('Connection error:', error)
     res.status(500).json({ error: error.message })
   }
 })
 
-// Session Starter
-async function startSession(phone) {
+// WhatsApp Connection Handler
+async function startWhatsAppConnection(phone) {
   return new Promise(async (resolve, reject) => {
     try {
       clearState()
-      
-      if (!fs.existsSync(sessionFolder)) {
-        fs.mkdirSync(sessionFolder, { recursive: true })
-      }
+      fs.mkdirSync(sessionFolder, { recursive: true })
 
       const { state, saveCreds } = await useMultiFileAuthState(sessionFolder)
 
@@ -109,51 +99,35 @@ async function startSession(phone) {
       }
 
       sock.ev.on('creds.update', saveCreds)
-      setupStatusViewing(sock) // Add status viewing
+      setupStatusViewing(sock)
 
       sock.ev.on('connection.update', async update => {
         const { connection, lastDisconnect } = update
 
         if (connection === 'open') {
-          // Session backup to Pastebin
-          try {
-            const output = await pastebin.createPasteFromFile(
-              `${sessionFolder}/creds.json`,
-              'Joel-XMD Session',
-              null,
-              1,
-              'N'
-            )
-            const sessionId = 'JOEL~XMD~' + output.split('pastebin.com/')[1]
-            console.log(sessionId)
-            
-            await sock.sendMessage(sock.user.id, { 
-              text: `*╭──────────────━┈⊷*\n*║ᴊᴏᴇʟ-xᴍᴅ-ᴠ¹⁰ sᴇssɪᴏɴ ɪᴅ*\n*╰───────────────━⊷*\n\n` +
-                    `Session ID: ${sessionId}\n\n` +
-                    `*╭─────────────━┈⊷*\n║ᴏᴡɴᴇʀ: ʟᴏʀᴅ ᴊᴏᴇʟ\n*╰─────────────━┈⊷*\n\n` +
-                    `*ᴛʜᴀɴᴋs ғᴏʀ ᴄʜᴏᴏsɪɴɢ ᴊᴏᴇʟ-ᴍᴅ*`
-            })
-
-            console.log('Connected to WhatsApp')
-          } catch (error) {
-            console.error('Pastebin error:', error)
-          }
+          console.log('✅ Successfully connected to WhatsApp')
+          
+          // Send welcome message
+          await sock.sendMessage(sock.user.id, { 
+            text: '🚀 Your Joel-XMD bot is now connected!\n\n' +
+                  'It will automatically view status updates.'
+          })
         }
 
         if (connection === 'close') {
           const reason = new Boom(lastDisconnect?.error)?.output.statusCode
-          console.log(`Disconnected (${reason}), reconnecting...`)
-          setTimeout(() => startSession(phone), 5000)
+          console.log(`Connection closed (${reason}), reconnecting...`)
+          setTimeout(() => startWhatsAppConnection(phone), 5000)
         }
       })
 
     } catch (error) {
-      console.error('Session error:', error)
+      console.error('Connection error:', error)
       reject(error)
     }
   })
 }
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
+  console.log(`🚀 Server running on port ${PORT}`)
 })
