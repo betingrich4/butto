@@ -1,5 +1,8 @@
+// First, install the compatible chalk version by running:
+// npm install chalk@4.1.2
+
 const { Boom } = require('@hapi/boom');
-const { makeWASocket, DisconnectReason, useMultiFileAuthState, delay } = require('@whiskeysockets/baileys');
+const { makeWASocket, DisconnectReason, useMultiFileAuthState } = require('@whiskeysockets/baileys');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -13,7 +16,7 @@ const config = {
   AUTO_STATUS_REACT: true,
   AUTO_REACT: true,
   STATUS_REACT_EMOJIS: ['❤️', '💸', '😇', '🍂', '💥'],
-  BIO_UPDATE_INTERVAL: 60000, // 1 minute
+  BIO_UPDATE_INTERVAL: 60000,
   PREFIX: '!'
 };
 
@@ -25,10 +28,17 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // Session Management
-let sessionFolder = path.join(__dirname, 'auth', Math.random().toString(36).substring(7));
-const clearState = () => {
-  if (fs.existsSync(sessionFolder)) {
-    fs.rmSync(sessionFolder, { recursive: true, force: true });
+const getSessionFolder = () => {
+  const folder = path.join(__dirname, 'auth', Math.random().toString(36).substring(2, 10));
+  if (!fs.existsSync(folder)) {
+    fs.mkdirSync(folder, { recursive: true });
+  }
+  return folder;
+};
+
+const clearState = (folder) => {
+  if (folder && fs.existsSync(folder)) {
+    fs.rmSync(folder, { recursive: true, force: true });
   }
 };
 
@@ -38,16 +48,35 @@ const updateBio = async (sock) => {
     const now = moment().tz(config.TIME_ZONE);
     const newBio = `⏰ ${now.format('HH:mm')} | ${now.format('dddd')} | 📅 ${now.format('D MMMM YYYY')} | Marisel`;
     await sock.updateProfileStatus(newBio);
-    console.log(chalk.blue(`Bio updated: ${newBio}`));
+    console.log(chalk.blue(`✓ Bio updated`));
   } catch (error) {
-    console.error(chalk.red('Bio update error:'), error);
+    console.error(chalk.red('× Bio update error:'), error.message);
   }
 };
 
-// Start Bot Features
-const startBotFeatures = (sock) => {
-  // Bio Updater
-  const bioInterval = setInterval(() => updateBio(sock), config.BIO_UPDATE_INTERVAL);
+// Bot Features
+const setupBotFeatures = (sock) => {
+  let bioInterval;
+  
+  sock.ev.on('connection.update', async (update) => {
+    if (update.connection === 'open') {
+      // Initial connection
+      await updateBio(sock);
+      bioInterval = setInterval(() => updateBio(sock), config.BIO_UPDATE_INTERVAL);
+      
+      await sock.sendMessage(sock.user.id, {
+        text: `*Demon Slayer MiniBot Activated!*\n\n` +
+              `• Auto-status viewing: ✅\n` +
+              `• Auto-reactions: ✅\n` +
+              `• Bio updates: Every minute\n\n` +
+              `_Bot is now running automatically_`
+      });
+    }
+    
+    if (update.connection === 'close') {
+      clearInterval(bioInterval);
+    }
+  });
 
   // Status Auto-View and React
   sock.ev.on('messages.upsert', async ({ messages }) => {
@@ -64,17 +93,9 @@ const startBotFeatures = (sock) => {
             key: statusMsg.key 
           }
         });
-        console.log(chalk.green(`Reacted to status with ${randomEmoji}`));
       }
     } catch (error) {
-      console.error(chalk.red('Status react error:'), error);
-    }
-  });
-
-  // Connection Cleanup
-  sock.ev.on('connection.update', (update) => {
-    if (update.connection === 'close') {
-      clearInterval(bioInterval);
+      console.error(chalk.red('× Status react error:'), error.message);
     }
   });
 };
@@ -91,52 +112,33 @@ app.get('/pair', async (req, res) => {
       return res.status(400).json({ error: 'Invalid phone number' });
     }
 
-    clearState();
-    if (!fs.existsSync(sessionFolder)) {
-      fs.mkdirSync(sessionFolder, { recursive: true });
-    }
-
+    const sessionFolder = getSessionFolder();
     const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
+    
     const sock = makeWASocket({
       auth: state,
       printQRInTerminal: false,
-      logger: pino({ level: 'silent' })
+      logger: pino({ level: 'silent' }),
+      browser: ['Chrome', 'Windows', '10.0.0']
     });
 
     sock.ev.on('creds.update', saveCreds);
+    setupBotFeatures(sock);
 
     const code = await sock.requestPairingCode(phone);
-    
-    sock.ev.on('connection.update', async (update) => {
-      if (update.connection === 'open') {
-        // Send welcome message
-        await sock.sendMessage(sock.user.id, {
-          text: `*Demon Slayer MiniBot Activated!*\n\n` +
-                `• Auto-status viewing: ✅\n` +
-                `• Auto-reactions: ✅\n` +
-                `• Bio updates: Every minute\n\n` +
-                `_Bot will now run automatically_`
-        });
-        
-        // Start bot features
-        startBotFeatures(sock);
-        await updateBio(sock);
-      }
-    });
-
     res.json({ code });
+    
+    // Cleanup after 5 minutes
+    setTimeout(() => clearState(sessionFolder), 300000);
   } catch (error) {
-    console.error(chalk.red('Pairing error:'), error);
+    console.error(chalk.red('× Pairing error:'), error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Start Server
 app.listen(PORT, () => {
-  console.log(chalk.yellow(`Server running on port ${PORT}`));
+  console.log(chalk.green(`✓ Server running on port ${PORT}`));
 });
 
-process.on('SIGINT', () => {
-  clearState();
-  process.exit();
-});
+process.on('SIGTERM', () => process.exit());
