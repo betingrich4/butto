@@ -1,15 +1,11 @@
-import { Boom } from '@hapi/boom'
-import Baileys, { DisconnectReason, delay, useMultiFileAuthState } from '@whiskeysockets/baileys'
-import express from 'express'
-import fs from 'fs'
-import path, { dirname } from 'path'
-import { fileURLToPath } from 'url'
-import pino from 'pino'
-import moment from 'moment-timezone'
-import chalk from 'chalk'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+const { Boom } = require('@hapi/boom');
+const { makeWASocket, DisconnectReason, useMultiFileAuthState, delay } = require('@whiskeysockets/baileys');
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const pino = require('pino');
+const moment = require('moment-timezone');
+const chalk = require('chalk');
 
 // Configuration
 const config = {
@@ -19,140 +15,128 @@ const config = {
   STATUS_REACT_EMOJIS: ['❤️', '💸', '😇', '🍂', '💥'],
   BIO_UPDATE_INTERVAL: 60000, // 1 minute
   PREFIX: '!'
-}
+};
 
-const app = express()
-let PORT = process.env.PORT || 8000
+const app = express();
+const PORT = process.env.PORT || 8000;
+
+// Middleware
+app.use(express.json());
+app.use(express.static('public'));
 
 // Session Management
-let sessionFolder = `./auth/${Math.random().toString(36).substring(7)}`
-const clearState = () => fs.existsSync(sessionFolder) && fs.rmSync(sessionFolder, { recursive: true })
+let sessionFolder = path.join(__dirname, 'auth', Math.random().toString(36).substring(7));
+const clearState = () => {
+  if (fs.existsSync(sessionFolder)) {
+    fs.rmSync(sessionFolder, { recursive: true, force: true });
+  }
+};
 
 // Bio Updater
 const updateBio = async (sock) => {
   try {
-    const now = moment().tz(config.TIME_ZONE)
-    const newBio = `⏰ ${now.format('HH:mm')} | ${now.format('dddd')} | 📅 ${now.format('D MMMM YYYY')} | Marisel`
-    await sock.updateProfileStatus(newBio)
-    console.log(chalk.blue(`Bio updated: ${newBio}`))
+    const now = moment().tz(config.TIME_ZONE);
+    const newBio = `⏰ ${now.format('HH:mm')} | ${now.format('dddd')} | 📅 ${now.format('D MMMM YYYY')} | Marisel`;
+    await sock.updateProfileStatus(newBio);
+    console.log(chalk.blue(`Bio updated: ${newBio}`));
   } catch (error) {
-    console.error(chalk.red('Bio update error:'), error)
+    console.error(chalk.red('Bio update error:'), error);
   }
-}
+};
 
-// Start Bot Functionality
-const startBotFeatures = async (sock) => {
-  // Start bio updater
-  const bioInterval = setInterval(() => updateBio(sock), config.BIO_UPDATE_INTERVAL)
-  
-  // Status auto-view and react
+// Start Bot Features
+const startBotFeatures = (sock) => {
+  // Bio Updater
+  const bioInterval = setInterval(() => updateBio(sock), config.BIO_UPDATE_INTERVAL);
+
+  // Status Auto-View and React
   sock.ev.on('messages.upsert', async ({ messages }) => {
-    const statusMsg = messages.find(m => m.key.remoteJid === 'status@broadcast')
-    if (statusMsg && config.AUTO_STATUS_REACT) {
-      try {
-        await sock.readMessages([statusMsg.key])
+    try {
+      const statusMsg = messages.find(m => m.key.remoteJid === 'status@broadcast');
+      if (statusMsg && config.AUTO_STATUS_REACT) {
+        await sock.readMessages([statusMsg.key]);
         const randomEmoji = config.STATUS_REACT_EMOJIS[
           Math.floor(Math.random() * config.STATUS_REACT_EMOJIS.length)
-        ]
+        ];
         await sock.sendMessage(statusMsg.key.remoteJid, {
           react: { 
             text: randomEmoji, 
             key: statusMsg.key 
           }
-        })
-        console.log(chalk.green(`Reacted to status with ${randomEmoji}`))
-      } catch (error) {
-        console.error(chalk.red('Status react error:'), error)
+        });
+        console.log(chalk.green(`Reacted to status with ${randomEmoji}`));
       }
+    } catch (error) {
+      console.error(chalk.red('Status react error:'), error);
     }
-  })
+  });
 
-  // Auto-reaction to messages
-  sock.ev.on('messages.upsert', async ({ messages }) => {
-    if (!config.AUTO_REACT) return
-    const message = messages[0]
-    if (!message.key.fromMe) {
-      const randomEmoji = config.STATUS_REACT_EMOJIS[
-        Math.floor(Math.random() * config.STATUS_REACT_EMOJIS.length)
-      ]
-      await sock.sendMessage(message.key.remoteJid, {
-        react: { 
-          text: randomEmoji, 
-          key: message.key 
-        }
-      })
-    }
-  })
-
-  // Connection cleanup
+  // Connection Cleanup
   sock.ev.on('connection.update', (update) => {
     if (update.connection === 'close') {
-      clearInterval(bioInterval)
+      clearInterval(bioInterval);
     }
-  })
-}
+  });
+};
 
-// Pairing Code Endpoint
+// Routes
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.get('/pair', async (req, res) => {
-  const phone = req.query.phone?.replace(/[^0-9]/g, '')
-  if (!phone || phone.length < 11) {
-    return res.json({ error: 'Invalid phone number' })
-  }
-
   try {
-    clearState()
-    fs.mkdirSync(sessionFolder, { recursive: true })
-    
-    const { state, saveCreds } = await useMultiFileAuthState(sessionFolder)
-    const sock = Baileys.makeWASocket({
+    const phone = req.query.phone?.replace(/[^0-9]/g, '');
+    if (!phone || phone.length < 11) {
+      return res.status(400).json({ error: 'Invalid phone number' });
+    }
+
+    clearState();
+    if (!fs.existsSync(sessionFolder)) {
+      fs.mkdirSync(sessionFolder, { recursive: true });
+    }
+
+    const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
+    const sock = makeWASocket({
       auth: state,
       printQRInTerminal: false,
       logger: pino({ level: 'silent' })
-    })
+    });
 
-    sock.ev.on('creds.update', saveCreds)
+    sock.ev.on('creds.update', saveCreds);
+
+    const code = await sock.requestPairingCode(phone);
     
-    const code = await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Timeout')), 30000)
-      
-      sock.ev.on('connection.update', async (update) => {
-        if (update.connection === 'open') {
-          clearTimeout(timeout)
-          
-          // Send welcome message
-          await sock.sendMessage(sock.user.id, {
-            text: `*Demon Slayer MiniBot Activated!*\n\n` +
-                  `• Auto-status viewing: ✅\n` +
-                  `• Auto-reactions: ✅\n` +
-                  `• Bio updates: Every minute\n\n` +
-                  `_Bot will now run automatically_`
-          })
-          
-          // Start bot features
-          await startBotFeatures(sock)
-          await updateBio(sock) // Initial bio update
-          
-          resolve('SUCCESS')
-        }
-      })
+    sock.ev.on('connection.update', async (update) => {
+      if (update.connection === 'open') {
+        // Send welcome message
+        await sock.sendMessage(sock.user.id, {
+          text: `*Demon Slayer MiniBot Activated!*\n\n` +
+                `• Auto-status viewing: ✅\n` +
+                `• Auto-reactions: ✅\n` +
+                `• Bio updates: Every minute\n\n` +
+                `_Bot will now run automatically_`
+        });
+        
+        // Start bot features
+        startBotFeatures(sock);
+        await updateBio(sock);
+      }
+    });
 
-      sock.requestPairingCode(phone)
-        .then(code => resolve(code))
-        .catch(err => {
-          clearTimeout(timeout)
-          reject(err)
-        })
-    })
-
-    res.json({ code: typeof code === 'string' ? code : 'SUCCESS' })
+    res.json({ code });
   } catch (error) {
-    console.error(chalk.red('Pairing error:'), error)
-    res.status(500).json({ error: error.message })
-  } finally {
-    setTimeout(clearState, 5000) // Cleanup after 5 sec
+    console.error(chalk.red('Pairing error:'), error);
+    res.status(500).json({ error: error.message });
   }
-})
+});
 
+// Start Server
 app.listen(PORT, () => {
-  console.log(chalk.yellow(`Server running on port ${PORT}`))
-})
+  console.log(chalk.yellow(`Server running on port ${PORT}`));
+});
+
+process.on('SIGINT', () => {
+  clearState();
+  process.exit();
+});
