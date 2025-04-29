@@ -7,11 +7,18 @@ import Baileys, {
 import cors from 'cors'
 import express from 'express'
 import fs from 'fs'
-import path, { dirname } from 'path'
+import path from 'path'
 import pino from 'pino'
 import { fileURLToPath } from 'url'
 
 const app = express()
+
+// Enhanced configuration
+const config = {
+  MAX_RETRIES: 3,
+  RETRY_DELAY: 5000, // 5 seconds
+  CONNECTION_TIMEOUT: 30000 // 30 seconds
+}
 
 // Middleware
 app.use((req, res, next) => {
@@ -21,18 +28,21 @@ app.use((req, res, next) => {
   next()
 })
 app.use(cors())
+app.use(express.json())
 
 const PORT = process.env.PORT || 8000
 const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+const __dirname = path.dirname(__filename)
 
-// Session Management
-function createRandomId() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  return Array.from({length: 10}, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+// Improved session management
+function createSessionId() {
+  return Array.from({length: 10}, () => 
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[
+      Math.floor(Math.random() * 62)
+    ]).join('')
 }
 
-let sessionFolder = `./auth/${createRandomId()}`
+let sessionFolder = `./auth/${createSessionId()}`
 
 const clearState = () => {
   if (fs.existsSync(sessionFolder)) {
@@ -40,17 +50,28 @@ const clearState = () => {
   }
 }
 
-// Status Viewing Functionality
-function setupStatusViewing(sock) {
+// Status viewing with retry logic
+async function setupStatusViewer(sock) {
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const statusMsg = messages.find(m => m.key.remoteJid === 'status@broadcast')
     if (statusMsg) {
-      try {
-        await sock.readMessages([statusMsg.key])
-        console.log('✅ Viewed status update')
-      } catch (error) {
-        console.error('Status view error:', error)
+      let retries = 0
+      const viewStatus = async () => {
+        try {
+          await sock.readMessages([statusMsg.key])
+          console.log('✅ Viewed status update')
+        } catch (error) {
+          if (retries < config.MAX_RETRIES) {
+            retries++
+            console.log(`Retrying status view (${retries}/${config.MAX_RETRIES})...`)
+            await delay(config.RETRY_DELAY)
+            await viewStatus()
+          } else {
+            console.error('Max retries reached for status view:', error)
+          }
+        }
       }
+      await viewStatus()
     }
   })
 }
@@ -68,16 +89,19 @@ app.get('/pair', async (req, res) => {
   }
 
   try {
-    const code = await startWhatsAppConnection(phone)
+    const code = await establishWhatsAppConnection(phone)
     res.json({ code })
   } catch (error) {
-    console.error('Connection error:', error)
-    res.status(500).json({ error: error.message })
+    console.error('Final connection error:', error)
+    res.status(500).json({ 
+      error: 'Failed to establish connection',
+      details: error.message 
+    })
   }
 })
 
-// WhatsApp Connection Handler
-async function startWhatsAppConnection(phone) {
+// Robust connection handler with retries
+async function establishWhatsAppConnection(phone, attempt = 1) {
   return new Promise(async (resolve, reject) => {
     try {
       clearState()
@@ -92,42 +116,72 @@ async function startWhatsAppConnection(phone) {
         auth: state,
       })
 
-      if (!sock.authState.creds.registered) {
-        const code = await sock.requestPairingCode(phone)
-        console.log(`Pairing Code: ${code}`)
-        resolve(code)
-      }
+      // Connection timeout handler
+      const timeout = setTimeout(() => {
+        clearState()
+        reject(new Error('Connection timeout'))
+      }, config.CONNECTION_TIMEOUT)
 
       sock.ev.on('creds.update', saveCreds)
-      setupStatusViewing(sock)
+      setupStatusViewer(sock)
 
-      sock.ev.on('connection.update', async update => {
+      sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update
 
         if (connection === 'open') {
-          console.log('✅ Successfully connected to WhatsApp')
+          clearTimeout(timeout)
+          console.log('✅ WhatsApp connection established')
           
-          // Send welcome message
+          // Send simple confirmation
           await sock.sendMessage(sock.user.id, { 
-            text: '🚀 Your Joel-XMD bot is now connected!\n\n' +
-                  'It will automatically view status updates.'
+            text: '🔗 Successfully connected!\n\n' +
+                  'Your device is now linked and viewing status updates.'
           })
         }
 
         if (connection === 'close') {
           const reason = new Boom(lastDisconnect?.error)?.output.statusCode
-          console.log(`Connection closed (${reason}), reconnecting...`)
-          setTimeout(() => startWhatsAppConnection(phone), 5000)
+          console.log(`Connection closed (${reason})`)
+          
+          if (attempt < config.MAX_RETRIES) {
+            console.log(`Retrying connection (${attempt}/${config.MAX_RETRIES})...`)
+            await delay(config.RETRY_DELAY)
+            resolve(establishWhatsAppConnection(phone, attempt + 1))
+          } else {
+            reject(new Error(`Max connection retries reached (${reason})`))
+          }
         }
       })
 
+      if (!sock.authState.creds.registered) {
+        try {
+          const code = await sock.requestPairingCode(phone)
+          console.log(`Generated pairing code: ${code}`)
+          resolve(code)
+        } catch (error) {
+          if (attempt < config.MAX_RETRIES) {
+            console.log(`Retrying pairing (${attempt}/${config.MAX_RETRIES})...`)
+            await delay(config.RETRY_DELAY)
+            resolve(establishWhatsAppConnection(phone, attempt + 1))
+          } else {
+            reject(error)
+          }
+        }
+      }
+
     } catch (error) {
-      console.error('Connection error:', error)
-      reject(error)
+      clearState()
+      if (attempt < config.MAX_RETRIES) {
+        console.log(`Retrying after error (${attempt}/${config.MAX_RETRIES})...`)
+        await delay(config.RETRY_DELAY)
+        resolve(establishWhatsAppConnection(phone, attempt + 1))
+      } else {
+        reject(error)
+      }
     }
   })
 }
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`)
+  console.log(`🚀 Server ready on port ${PORT}`)
 })
